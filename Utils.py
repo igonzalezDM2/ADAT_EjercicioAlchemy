@@ -1,14 +1,23 @@
 import string
+from enum import Enum
 from typing import Type
 
 from sqlalchemy import create_engine, text, desc
 from sqlalchemy.orm import Session, sessionmaker
 
 import OlimpiadasDB
-from OlimpiadasDB import Olimpiada, Deporte, Evento, Atleta
+from OlimpiadasDB import Olimpiada, Deporte, Evento, Atleta, Participacion
 
 
 class Utils:
+    class Medalla(Enum):
+        ORO = "GOLD"
+        PLATA = "SILVER"
+        BRONCE = "BRONZE"
+
+        @staticmethod
+        def list():
+            return list(map(lambda c: c.value, Utils.Medalla))
 
     OPCION_INCORRECTA = "Opcion incorrecta"
 
@@ -42,6 +51,28 @@ class Utils:
             ediciones = q.all()
 
         if ediciones:
+            print("Elija la edición:")
+            for idx, ed in enumerate(ediciones):
+                print(f"\t{idx + 1} - {ed.city} {ed.year}")
+            num_ed = input("Inserte el número de la edición: ")
+            try:
+                indice = int(num_ed) - 1
+                return ediciones[indice]
+            except Exception as e:
+                raise Exception(Utils.OPCION_INCORRECTA)
+
+        raise Exception("No se pudo encontrar la edición")
+
+    @staticmethod
+    def seleccion_edicion_por_deportista(deportista: Atleta, temporada=None) -> Olimpiada:
+        s_ediciones = set()
+        if deportista:
+            for part in deportista.participaciones:
+                s_ediciones.add(part.eventos.olimpiadas)
+
+        ediciones = list(s_ediciones)
+
+        if len(ediciones) > 0:
             print("Elija la edición:")
             for idx, ed in enumerate(ediciones):
                 print(f"\t{idx + 1} - {ed.city} {ed.year}")
@@ -91,7 +122,7 @@ class Utils:
             raise Exception(Utils.OPCION_INCORRECTA)
 
     @staticmethod
-    def buscar_deportista(sesion: Session) -> Atleta:
+    def buscar_deportista(sesion: Session, creacion=False) -> Atleta:
         namae = input("Introduzca el nombre del deportista: ")
 
         q = sesion.query(Atleta)
@@ -112,9 +143,78 @@ class Utils:
             except Exception as e:
                 raise Exception(Utils.OPCION_INCORRECTA)
 
-        else:
-            print("MOGAMBO")
-        #      TODO: CREAR SI NO EXISTE
+        elif creacion:
+            return Utils.crear_deportista(sesion)
 
-        raise Exception("No se pudo encontrar el deportista")
+        return None
+
+    @staticmethod
+    def crear_deportista(sesion: Session) -> Atleta:
+        try:
+            crear_confirm = input("No existe el deportista; ¿desea crear uno nuevo? S/N")[0].upper()
+            if crear_confirm != "S":
+                return
+
+            nombre = input("Introduzca el nombre del deportista: ")
+
+            sexo = input("Introduzca el sexo (M/F): ")[0].upper()
+
+            if sexo not in ["M", "F"]:
+                print("Sexo inválido")
+                return
+
+            altura = int(input("Introduzca la altura en centímetros: "))
+            peso = float(input("Introduzca el peso (Kg): "))
+
+            nuevo_atleta = Atleta()
+            nuevo_atleta.nombre = nombre
+            nuevo_atleta.alt = altura
+            nuevo_atleta.peso = peso
+            nuevo_atleta.sex = sexo
+
+            sesion.add(nuevo_atleta)
+            # No hago el commit aquí para poder hacer un rollback fuera de la función; ¡No olvides hacer el commit fuera!
+            # sesion.commit()
+            print("Se creó el deportista")
+            sesion.refresh(nuevo_atleta)
+            return nuevo_atleta
+        except Exception as e:
+            print("ERROR: No se pudo crear el deportista.")
+        return None
+
+    @staticmethod
+    def buscar_participacion(deportista: Atleta) -> Participacion:
+        participaciones: list[Participacion] = deportista.participaciones
+
+        if participaciones:
+            print("Elija el evento:")
+            for idx, part in enumerate(participaciones):
+                evento: Evento = part.eventos
+                print(f"\t{idx + 1} - {evento.nombre}")
+
+            num_par = input("Inserte el número del evento: ")
+            try:
+                indice = int(num_par) - 1
+                return participaciones[indice]
+            except Exception as e:
+                raise Exception(Utils.OPCION_INCORRECTA)
+
+        return None
+
+    @staticmethod
+    def actualizar_medalla(participacion: Participacion):
+        print("Elija la medalla:")
+        valor_medalla = None
+        for idx, med in enumerate(Utils.Medalla.list()):
+            print(f"{idx + 1} - {med}")
+        print("4 - Ninguna")
+        num_med = input("Inserte el número de la medalla: ")
+        try:
+            if num_med != "4":
+                indice = int(num_med) - 1
+                valor_medalla = Utils.Medalla.list()[indice]
+        except Exception as e:
+            raise Exception(Utils.OPCION_INCORRECTA)
+
+        participacion.medalla = valor_medalla
 
