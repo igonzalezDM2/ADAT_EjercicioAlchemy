@@ -1,4 +1,4 @@
-from OlimpiadasDB import Atleta, Participacion, Equipo
+from OlimpiadasORM import Atleta, Participacion, Equipo
 from dao import DAOOlimpiadas
 from dao.DAOOlimpiadas import DAOOlimpiadas
 
@@ -10,6 +10,7 @@ class Renkinjutsu:
             1. Listado de deportistas participantes
             2. Modificar medalla
             3. Añadir deportista/participación
+            4. Eliminar participación
             0. Salir
         """
 
@@ -22,6 +23,8 @@ class Renkinjutsu:
                 self.__ejercicio2__()
             if opcion == "3":
                 self.__ejercicio3__()
+            if opcion == "4":
+                self.__ejercicio4__()
 
 
 
@@ -56,7 +59,7 @@ class Renkinjutsu:
                 print("No se hallaron resultados.")
                 return
             participacion = DAOOlimpiadas.buscar_participacion(deportista)
-            if not deportista:
+            if not participacion:
                 print("No existe la participación.")
                 return
             DAOOlimpiadas.actualizar_medalla(participacion)
@@ -89,6 +92,8 @@ class Renkinjutsu:
 
                 session.add(nueva_participacion)
                 session.commit()
+            else:
+                print("ERROR: No existe el deportista")
         except Exception as e:
             if session:
                 session.rollback()
@@ -96,5 +101,41 @@ class Renkinjutsu:
         finally:
             if session:
                 session.close()
+
+    def __ejercicio4__(self):
+        session = None
+        try:
+            session = DAOOlimpiadas.sesion_bbdd()
+
+            deportista = DAOOlimpiadas.buscar_deportista(session)
+            if not deportista:
+                print("ERROR: No existe el deportista")
+                return
+
+            #SI NO HAY NINGUNA PARTICIPACIÓN, TAMBIÉN ME CARGO AL DEPORTISTA
+            if len(deportista.participaciones) < 2:
+                # NO PUSE ON DELETE CASCADE AL CREARLA :(
+                if len(deportista.participaciones) == 1:
+                    session.delete(deportista.participaciones[0])
+                session.delete(deportista)
+                print("El deportista y su participación furon eliminados")
+            else:
+                participacion = DAOOlimpiadas.buscar_participacion(deportista)
+                if not participacion:
+                    print("ERROR: No existe la participación")
+                    return
+                session.delete(participacion)
+                print("La participación fue eliminada")
+
+            session.commit()
+        except Exception as e:
+            if session:
+                session.rollback()
+            print(e)
+        finally:
+            if session:
+                session.close()
+
+
 
 Renkinjutsu()

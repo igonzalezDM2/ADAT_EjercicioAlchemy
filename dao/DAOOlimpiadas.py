@@ -5,8 +5,8 @@ from typing import Type
 from sqlalchemy import create_engine, text, desc
 from sqlalchemy.orm import Session, sessionmaker
 
-import OlimpiadasDB
-from OlimpiadasDB import Olimpiada, Deporte, Evento, Atleta, Participacion, Equipo
+import OlimpiadasORM
+from OlimpiadasORM import Olimpiada, Deporte, Evento, Atleta, Participacion, Equipo
 
 
 class DAOOlimpiadas:
