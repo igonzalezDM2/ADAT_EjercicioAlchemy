@@ -1,8 +1,6 @@
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
-from OlimpiadasDB import Deporte, Atleta, Participacion, Equipo, Evento
-from Utils import Utils
+from OlimpiadasDB import Atleta, Participacion, Equipo
+from dao import DAOOlimpiadas
+from dao.DAOOlimpiadas import DAOOlimpiadas
 
 
 class Renkinjutsu:
@@ -30,11 +28,11 @@ class Renkinjutsu:
     def __ejercicio1__(self):
         session = None
         try:
-            session = Utils.sesion_bbdd()
-            temporada = Utils.seleccion_temporada()
-            edicion = Utils.seleccion_edicion(session, temporada=temporada)
-            deporte = Utils.seleccion_deporte(edicion)
-            evento = Utils.seleccion_evento(deporte, olimpiada=edicion)
+            session = DAOOlimpiadas.sesion_bbdd()
+            temporada = DAOOlimpiadas.seleccion_temporada()
+            edicion = DAOOlimpiadas.seleccion_edicion(session, temporada=temporada)
+            deporte = DAOOlimpiadas.seleccion_deporte(edicion)
+            evento = DAOOlimpiadas.seleccion_evento(deporte, olimpiada=edicion)
 
             print(f"Temporada: {temporada}\nEdición: {edicion.city} {edicion.year}\n Deporte: {deporte.nombre}\nEvento: {evento.nombre}\n")
             participaciones: list[Participacion] = evento.participaciones
@@ -52,16 +50,16 @@ class Renkinjutsu:
     def __ejercicio2__(self):
         session = None
         try:
-            session = Utils.sesion_bbdd()
-            deportista = Utils.buscar_deportista(session)
+            session = DAOOlimpiadas.sesion_bbdd()
+            deportista = DAOOlimpiadas.buscar_deportista(session)
             if not deportista:
                 print("No se hallaron resultados.")
                 return
-            participacion = Utils.buscar_participacion(deportista)
+            participacion = DAOOlimpiadas.buscar_participacion(deportista)
             if not deportista:
                 print("No existe la participación.")
                 return
-            Utils.actualizar_medalla(participacion)
+            DAOOlimpiadas.actualizar_medalla(participacion)
             session.commit()
         except Exception as e:
             print(e)
@@ -72,15 +70,25 @@ class Renkinjutsu:
     def __ejercicio3__(self):
         session = None
         try:
-            session = Utils.sesion_bbdd()
-            deportista = Utils.buscar_deportista(session, creacion=True)
+            session = DAOOlimpiadas.sesion_bbdd()
 
-            temporada = Utils.seleccion_temporada()
-            edicion = Utils.seleccion_edicion_por_deportista(deportista, temporada=temporada)
+            deportista = DAOOlimpiadas.buscar_deportista(session, creacion=True)
+            if deportista:
+                temporada = DAOOlimpiadas.seleccion_temporada()
+                edicion = DAOOlimpiadas.seleccion_edicion(session, temporada=temporada)
+                deporte = DAOOlimpiadas.seleccion_deporte(edicion)
+                evento = DAOOlimpiadas.seleccion_evento(deporte, olimpiada=edicion)
+                equipo = DAOOlimpiadas.elegir_equipo(session)
 
-            # TODO: Continuar por aquí
+                nueva_participacion = Participacion()
+                nueva_participacion.atleta = deportista.id
+                nueva_participacion.evento = evento.id
+                nueva_participacion.equipo = equipo.id
+                nueva_participacion.edad = int(input("Inserte la edad del deportista: "))
+                DAOOlimpiadas.actualizar_medalla(nueva_participacion)
 
-
+                session.add(nueva_participacion)
+                session.commit()
         except Exception as e:
             if session:
                 session.rollback()

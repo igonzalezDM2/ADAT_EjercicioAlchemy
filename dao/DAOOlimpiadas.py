@@ -6,10 +6,10 @@ from sqlalchemy import create_engine, text, desc
 from sqlalchemy.orm import Session, sessionmaker
 
 import OlimpiadasDB
-from OlimpiadasDB import Olimpiada, Deporte, Evento, Atleta, Participacion
+from OlimpiadasDB import Olimpiada, Deporte, Evento, Atleta, Participacion, Equipo
 
 
-class Utils:
+class DAOOlimpiadas:
     class Medalla(Enum):
         ORO = "GOLD"
         PLATA = "SILVER"
@@ -17,7 +17,7 @@ class Utils:
 
         @staticmethod
         def list():
-            return list(map(lambda c: c.value, Utils.Medalla))
+            return list(map(lambda c: c.value, DAOOlimpiadas.Medalla))
 
     OPCION_INCORRECTA = "Opcion incorrecta"
 
@@ -39,7 +39,7 @@ class Utils:
         elif temporadaElegida == "2":
             return "Winter"
         else:
-            raise Exception(Utils.OPCION_INCORRECTA)
+            raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
     @staticmethod
     def seleccion_edicion(session: Session, temporada=None) -> Olimpiada:
@@ -59,7 +59,7 @@ class Utils:
                 indice = int(num_ed) - 1
                 return ediciones[indice]
             except Exception as e:
-                raise Exception(Utils.OPCION_INCORRECTA)
+                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         raise Exception("No se pudo encontrar la edición")
 
@@ -81,7 +81,7 @@ class Utils:
                 indice = int(num_ed) - 1
                 return ediciones[indice]
             except Exception as e:
-                raise Exception(Utils.OPCION_INCORRECTA)
+                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         raise Exception("No se pudo encontrar la edición")
 
@@ -100,7 +100,7 @@ class Utils:
                 indice = int(num_de) - 1
                 return deportes[indice]
             except Exception as e:
-                raise Exception(Utils.OPCION_INCORRECTA)
+                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         raise Exception("No se pudo encontrar el deporte")
 
@@ -119,7 +119,7 @@ class Utils:
             indice = int(num_ev) - 1
             return eventos[indice]
         except Exception as e:
-            raise Exception(Utils.OPCION_INCORRECTA)
+            raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
     @staticmethod
     def buscar_deportista(sesion: Session, creacion=False) -> Atleta:
@@ -141,10 +141,10 @@ class Utils:
                 indice = int(num_de) - 1
                 return deportistas[indice]
             except Exception as e:
-                raise Exception(Utils.OPCION_INCORRECTA)
+                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         elif creacion:
-            return Utils.crear_deportista(sesion)
+            return DAOOlimpiadas.crear_deportista(sesion)
 
         return None
 
@@ -173,12 +173,12 @@ class Utils:
             nuevo_atleta.sex = sexo
 
             sesion.add(nuevo_atleta)
-            # No hago el commit aquí para poder hacer un rollback fuera de la función; ¡No olvides hacer el commit fuera!
-            # sesion.commit()
+            sesion.commit()
             print("Se creó el deportista")
             sesion.refresh(nuevo_atleta)
             return nuevo_atleta
         except Exception as e:
+            sesion.rollback()
             print("ERROR: No se pudo crear el deportista.")
         return None
 
@@ -197,7 +197,7 @@ class Utils:
                 indice = int(num_par) - 1
                 return participaciones[indice]
             except Exception as e:
-                raise Exception(Utils.OPCION_INCORRECTA)
+                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         return None
 
@@ -205,16 +205,31 @@ class Utils:
     def actualizar_medalla(participacion: Participacion):
         print("Elija la medalla:")
         valor_medalla = None
-        for idx, med in enumerate(Utils.Medalla.list()):
+        for idx, med in enumerate(DAOOlimpiadas.Medalla.list()):
             print(f"{idx + 1} - {med}")
         print("4 - Ninguna")
         num_med = input("Inserte el número de la medalla: ")
         try:
             if num_med != "4":
                 indice = int(num_med) - 1
-                valor_medalla = Utils.Medalla.list()[indice]
+                valor_medalla = DAOOlimpiadas.Medalla.list()[indice]
         except Exception as e:
-            raise Exception(Utils.OPCION_INCORRECTA)
+            raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
 
         participacion.medalla = valor_medalla
 
+    @staticmethod
+    def elegir_equipo(sesion: Session) -> Equipo:
+        print("Elija el equipo:")
+        equipos: list[Equipo] = sesion.query(Equipo).order_by(Equipo.nombre).all()
+        for idx, eq in enumerate(equipos):
+            print(f"{idx + 1} - {eq.nombre} ({eq.noc})")
+
+        num_eq = input("Inserte el número del equipo: ")
+        try:
+                indice = int(num_eq) - 1
+                return equipos[indice]
+        except Exception as e:
+            raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
+
+        raise Exception("No se encontró el equipo")
