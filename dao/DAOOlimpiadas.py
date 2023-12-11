@@ -1,6 +1,6 @@
 import string
 from enum import Enum
-from typing import Type
+from typing import Type, Callable, Any
 
 from sqlalchemy import create_engine, text, desc
 from sqlalchemy.orm import Session, sessionmaker
@@ -50,18 +50,7 @@ class DAOOlimpiadas:
         else:
             ediciones = q.all()
 
-        if ediciones:
-            print("Elija la edición:")
-            for idx, ed in enumerate(ediciones):
-                print(f"\t{idx + 1} - {ed.city} {ed.year}")
-            num_ed = input("Inserte el número de la edición: ")
-            try:
-                indice = int(num_ed) - 1
-                return ediciones[indice]
-            except Exception as e:
-                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
-
-        raise Exception("No se pudo encontrar la edición")
+        return DAOOlimpiadas.elegir_opcion(ediciones, lambda idx, ed: f"\t{idx + 1} - {ed.city} {ed.year}", "edición")
 
     @staticmethod
     def seleccion_edicion_por_deportista(deportista: Atleta, temporada=None) -> Olimpiada:
@@ -73,34 +62,16 @@ class DAOOlimpiadas:
         ediciones = list(s_ediciones)
 
         if len(ediciones) > 0:
-            print("Elija la edición:")
-            for idx, ed in enumerate(ediciones):
-                print(f"\t{idx + 1} - {ed.city} {ed.year}")
-            num_ed = input("Inserte el número de la edición: ")
-            try:
-                indice = int(num_ed) - 1
-                return ediciones[indice]
-            except Exception as e:
-                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
+            return DAOOlimpiadas.elegir_opcion(ediciones, lambda idx, ed: f"\t{idx + 1} - {ed.city} {ed.year}", "edición")
 
         raise Exception("No se pudo encontrar la edición")
 
     @staticmethod
     def seleccion_deporte(olimpiada: Olimpiada) -> Deporte:
-
         deportes = sorted(list(set(map(lambda ev: ev.deportes, olimpiada.eventos))), key=lambda dep: dep.nombre)
 
         if deportes:
-            print("Elija el deporte:")
-
-            for idx, de in enumerate(deportes):
-                print(f"\t{idx + 1} - {de.nombre}")
-            num_de = input("Inserte el número del deporte: ")
-            try:
-                indice = int(num_de) - 1
-                return deportes[indice]
-            except Exception as e:
-                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
+            return DAOOlimpiadas.elegir_opcion(deportes, lambda idx, de: f"\t{idx + 1} - {de.nombre}", "deporte")
 
         raise Exception("No se pudo encontrar el deporte")
 
@@ -111,15 +82,8 @@ class DAOOlimpiadas:
             eventos = list(filter(lambda ev: ev.olimpiada == olimpiada.id, deporte.eventos))
 
         if eventos:
-            print("Elija el evento:")
-        for idx, ev in enumerate(eventos):
-            print(f"\t{idx + 1} - {ev.nombre}")
-        num_ev = input("Inserte el número del evento: ")
-        try:
-            indice = int(num_ev) - 1
-            return eventos[indice]
-        except Exception as e:
-            raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
+            return DAOOlimpiadas.elegir_opcion(eventos, lambda idx, ev: f"\t{idx + 1} - {ev.nombre}", "evento")
+        raise Exception("No se pudo encontrar el evento")
 
     @staticmethod
     def buscar_deportista(sesion: Session, creacion=False) -> Atleta:
@@ -133,16 +97,7 @@ class DAOOlimpiadas:
             deportistas = q.all()
 
         if deportistas and deportistas.count() > 0:
-            print("Elija el deportista:")
-            for idx, de in enumerate(deportistas):
-                print(f"\t{idx + 1} - {de.nombre}")
-            num_de = input("Inserte el número del deportista: ")
-            try:
-                indice = int(num_de) - 1
-                return deportistas[indice]
-            except Exception as e:
-                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
-
+            return DAOOlimpiadas.elegir_opcion(deportistas, lambda idx, de: f"\t{idx + 1} - {de.nombre}", "deportista")
         elif creacion:
             return DAOOlimpiadas.crear_deportista(sesion)
 
@@ -187,17 +142,7 @@ class DAOOlimpiadas:
         participaciones: list[Participacion] = deportista.participaciones
 
         if participaciones:
-            print("Elija el evento:")
-            for idx, part in enumerate(participaciones):
-                evento: Evento = part.eventos
-                print(f"\t{idx + 1} - {evento.nombre}")
-
-            num_par = input("Inserte el número del evento: ")
-            try:
-                indice = int(num_par) - 1
-                return participaciones[indice]
-            except Exception as e:
-                raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
+            return DAOOlimpiadas.elegir_opcion(participaciones, lambda idx, part: f"\t{idx + 1} - {part.eventos.nombre}", "evento")
 
         return None
 
@@ -222,14 +167,17 @@ class DAOOlimpiadas:
     def elegir_equipo(sesion: Session) -> Equipo:
         print("Elija el equipo:")
         equipos: list[Equipo] = sesion.query(Equipo).order_by(Equipo.nombre).all()
-        for idx, eq in enumerate(equipos):
-            print(f"{idx + 1} - {eq.nombre} ({eq.noc})")
+        return DAOOlimpiadas.elegir_opcion(equipos, lambda idx, eq: f"{idx + 1} - {eq.nombre} ({eq.noc})", "equipo")
 
-        num_eq = input("Inserte el número del equipo: ")
+    @staticmethod
+    def elegir_opcion(lista: list, print_callback: Callable, tipo_objeto="") -> Any:
+        print(f"Elija {tipo_objeto}:")
+        for idx, el in enumerate(lista):
+            print(print_callback(idx, el))
+
+        num_el = input(f"Inserte el número de {tipo_objeto}: ")
         try:
-                indice = int(num_eq) - 1
-                return equipos[indice]
+                indice = int(num_el) - 1
+                return lista[indice]
         except Exception as e:
             raise Exception(DAOOlimpiadas.OPCION_INCORRECTA)
-
-        raise Exception("No se encontró el equipo")
