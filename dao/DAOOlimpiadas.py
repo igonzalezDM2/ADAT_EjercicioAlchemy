@@ -170,7 +170,7 @@ class DAOOlimpiadas:
         return DAOOlimpiadas.elegir_opcion(equipos, lambda idx, eq: f"{idx + 1} - {eq.nombre} ({eq.noc})", "equipo")
 
     @staticmethod
-    def elegir_opcion(lista: list, print_callback: Callable, tipo_objeto="") -> Any:
+    def elegir_opcion(lista: list, print_callback: Callable[[int, Any], str], tipo_objeto="") -> Any:
         print(f"Elija {tipo_objeto}:")
         for idx, el in enumerate(lista):
             print(print_callback(idx, el))
